@@ -1,0 +1,12 @@
+node_modules
+.next
+.git
+.env*
+data/**
+coverage
+README.md
+*.tsbuildinfo
+prisma/*.db
+prisma/*.db-journal
+prisma/*.sqlite
+prisma/*.sqlite-journal
