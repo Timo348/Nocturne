@@ -1,7 +1,7 @@
 services:
   nocturne:
     build: .
-    image: timo348/nocturne:latest
+    image: timo348/nocturne:0.2.0
     restart: unless-stopped
     ports:
       - "${APP_PORT:-3000}:3000"
