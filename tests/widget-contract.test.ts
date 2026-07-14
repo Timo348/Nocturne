@@ -32,12 +32,11 @@ describe("generated widget registry", () => {
     expect(canUseWidget("DEVELOPER", gitea)).toBe(true);
   });
 
-  it("validates Prometheus URLs and metric display settings", () => {
+  it("validates and normalizes Prometheus metrics links", () => {
     const prometheus = generatedWidgetDefinitions.find((item) => item.manifest.type === "prometheus")!;
-    const valid = { baseUrl: "https://prometheus.home", query: "up", label: "Targets", reduction: "sum", unit: "percent", decimals: 1, headerName: "", headerValue: "" };
-    expect(() => prometheus.configSchema.parse(valid)).not.toThrow();
-    expect(() => prometheus.configSchema.parse({ ...valid, baseUrl: "ftp://prometheus.home" })).toThrow();
-    expect(() => prometheus.configSchema.parse({ ...valid, decimals: 8 })).toThrow();
+    expect(prometheus.configSchema.parse({ metricsUrl: "prometheus.home/metrics" })).toEqual({ metricsUrl: "https://prometheus.home/metrics" });
+    expect(() => prometheus.configSchema.parse({ metricsUrl: "ftp://prometheus.home/metrics" })).toThrow();
+    expect(() => prometheus.configSchema.parse({ metricsUrl: "" })).toThrow();
   });
 
   it("rejects non-HTTP shortcut protocols", () => {

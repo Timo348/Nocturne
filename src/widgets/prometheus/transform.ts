@@ -1,81 +1,61 @@
-export const prometheusUnits = [
-  "number",
-  "percent",
-  "ratio_percent",
-  "bytes_auto",
-  "bytes",
-  "kilobytes",
-  "megabytes",
-  "gigabytes",
-  "duration_auto",
-  "milliseconds",
-  "seconds",
-  "minutes",
-  "hours",
-] as const;
+export type PrometheusSample = {
+  name: string;
+  labels: string;
+  value: number;
+};
 
-export type PrometheusUnit = (typeof prometheusUnits)[number];
-export type PrometheusReduction = "first" | "sum" | "average" | "min" | "max";
+export type PrometheusMetrics = {
+  samples: PrometheusSample[];
+  metricCount: number;
+  seriesCount: number;
+  truncated: boolean;
+};
 
-export function reducePrometheusValues(values: number[], reduction: PrometheusReduction) {
-  const finite = values.filter(Number.isFinite);
-  if (finite.length === 0) throw new Error("Prometheus returned no finite numeric samples");
-  if (reduction === "first") return finite[0];
-  if (reduction === "sum") return finite.reduce((total, value) => total + value, 0);
-  if (reduction === "average") return finite.reduce((total, value) => total + value, 0) / finite.length;
-  if (reduction === "min") return Math.min(...finite);
-  return Math.max(...finite);
+const samplePattern = /^([A-Za-z_:][A-Za-z0-9_:]*)(\{(?:[^{}"]|"(?:\\.|[^"\\])*")*\})?\s+((?:[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?)|NaN|[+-]?Inf)(?:\s+\d+)?(?:\s+#.*)?$/;
+
+export function normalizeMetricsUrl(value: string) {
+  const trimmed = value.trim();
+  return /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
 }
 
-function numberText(value: number, decimals: number) {
-  return new Intl.NumberFormat("de-DE", {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-  }).format(value);
+export function legacyMetricsUrl(value: string) {
+  const endpoint = new URL(normalizeMetricsUrl(value));
+  endpoint.pathname = `${endpoint.pathname.replace(/\/+$/, "")}/metrics`;
+  return endpoint.toString();
 }
 
-export function formatPrometheusValue(value: number, unit: PrometheusUnit, decimals: number) {
-  const places = Math.max(0, Math.min(4, Math.trunc(decimals)));
-  let converted = value;
-  let unitText = "";
-  let progress: number | undefined;
+export function parsePrometheusMetrics(text: string, maxSamples = 160): PrometheusMetrics {
+  const samples: PrometheusSample[] = [];
+  const metricNames = new Set<string>();
+  let seriesCount = 0;
 
-  if (unit === "percent" || unit === "ratio_percent") {
-    converted = unit === "ratio_percent" ? value * 100 : value;
-    unitText = "%";
-    progress = Math.max(0, Math.min(100, converted));
-  } else if (unit === "bytes_auto") {
-    const labels = ["B", "KB", "MB", "GB", "TB"];
-    let index = 0;
-    while (Math.abs(converted) >= 1024 && index < labels.length - 1) {
-      converted /= 1024;
-      index += 1;
+  for (const rawLine of text.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+    const match = samplePattern.exec(line);
+    if (!match) continue;
+    const value = Number(match[3]);
+    if (!Number.isFinite(value)) continue;
+    const name = match[1];
+    metricNames.add(name);
+    seriesCount += 1;
+    if (samples.length < maxSamples) {
+      samples.push({
+        name,
+        labels: (match[2] ?? "").slice(1, -1),
+        value,
+      });
     }
-    unitText = labels[index];
-  } else if (["bytes", "kilobytes", "megabytes", "gigabytes"].includes(unit)) {
-    const powers = { bytes: 0, kilobytes: 1, megabytes: 2, gigabytes: 3 } as const;
-    const labels = { bytes: "B", kilobytes: "KB", megabytes: "MB", gigabytes: "GB" } as const;
-    const byteUnit = unit as keyof typeof powers;
-    converted = value / 1024 ** powers[byteUnit];
-    unitText = labels[byteUnit];
-  } else if (unit === "duration_auto") {
-    const absolute = Math.abs(value);
-    if (absolute >= 3600) { converted = value / 3600; unitText = "h"; }
-    else if (absolute >= 60) { converted = value / 60; unitText = "min"; }
-    else if (absolute >= 1) { unitText = "s"; }
-    else { converted = value * 1000; unitText = "ms"; }
-  } else if (unit === "milliseconds") {
-    converted = value * 1000;
-    unitText = "ms";
-  } else if (unit === "seconds") {
-    unitText = "s";
-  } else if (unit === "minutes") {
-    converted = value / 60;
-    unitText = "min";
-  } else if (unit === "hours") {
-    converted = value / 3600;
-    unitText = "h";
   }
 
-  return { valueText: numberText(converted, places), unitText, progress };
+  if (seriesCount === 0) throw new Error("Der Endpunkt enthält keine lesbaren Prometheus-Metriken");
+  return { samples, metricCount: metricNames.size, seriesCount, truncated: seriesCount > samples.length };
+}
+
+export function formatPrometheusSample(value: number) {
+  const absolute = Math.abs(value);
+  if ((absolute > 0 && absolute < 0.001) || absolute >= 1_000_000_000_000) {
+    return value.toExponential(3);
+  }
+  return new Intl.NumberFormat("de-DE", { maximumFractionDigits: 3 }).format(value);
 }

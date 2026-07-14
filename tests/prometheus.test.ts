@@ -1,66 +1,79 @@
 import { describe, expect, it } from "vitest";
 import type { SafeHttpOptions } from "@/widget-engine/contracts";
 import { definition } from "@/widgets/prometheus/definition";
-import { formatPrometheusValue, reducePrometheusValues } from "@/widgets/prometheus/transform";
+import { formatPrometheusSample, legacyMetricsUrl, normalizeMetricsUrl, parsePrometheusMetrics } from "@/widgets/prometheus/transform";
 
-describe("Prometheus metric transformation", () => {
-  it("reduces multiple vector samples deterministically", () => {
-    const values = [1, 3, 8];
-    expect(reducePrometheusValues(values, "first")).toBe(1);
-    expect(reducePrometheusValues(values, "sum")).toBe(12);
-    expect(reducePrometheusValues(values, "average")).toBe(4);
-    expect(reducePrometheusValues(values, "min")).toBe(1);
-    expect(reducePrometheusValues(values, "max")).toBe(8);
+const exposition = `
+# HELP http_requests_total Total HTTP requests
+# TYPE http_requests_total counter
+http_requests_total{method="get",code="200"} 1027 1710000000
+http_requests_total{method="post",code="201"} 3
+node_cpu_ratio 0.425
+room_temperature_celsius -1.25e1
+request_duration_seconds_bucket{le="+Inf"} 10 # {trace_id="abc"} 1.0
+invalid_metric NaN
+`;
+
+describe("Prometheus metrics endpoint", () => {
+  it("normalizes links without a protocol to HTTPS", () => {
+    expect(normalizeMetricsUrl("monitoring.homelab.de/metrics")).toBe("https://monitoring.homelab.de/metrics");
+    expect(normalizeMetricsUrl("http://win11.homelab.de/metrics")).toBe("http://win11.homelab.de/metrics");
+    expect(legacyMetricsUrl("https://prometheus.homelab.de/base/")).toBe("https://prometheus.homelab.de/base/metrics");
   });
 
-  it("rejects an empty or non-finite Prometheus result", () => {
-    expect(() => reducePrometheusValues([], "sum")).toThrow(/no finite numeric samples/i);
-    expect(() => reducePrometheusValues([Number.NaN, Number.POSITIVE_INFINITY], "sum")).toThrow(/no finite numeric samples/i);
+  it("parses native Prometheus text with labels, timestamps and exemplars", () => {
+    const result = parsePrometheusMetrics(exposition);
+    expect(result).toMatchObject({ metricCount: 4, seriesCount: 5, truncated: false });
+    expect(result.samples[0]).toEqual({ name: "http_requests_total", labels: 'method="get",code="200"', value: 1027 });
+    expect(result.samples[2]).toEqual({ name: "node_cpu_ratio", labels: "", value: 0.425 });
+    expect(result.samples[4]).toEqual({ name: "request_duration_seconds_bucket", labels: 'le="+Inf"', value: 10 });
   });
 
-  it("formats ratios, bytes and seconds in the selected units", () => {
-    expect(formatPrometheusValue(0.425, "ratio_percent", 1)).toEqual({ valueText: "42,5", unitText: "%", progress: 42.5 });
-    expect(formatPrometheusValue(1536, "bytes_auto", 2)).toEqual({ valueText: "1,50", unitText: "KB", progress: undefined });
-    expect(formatPrometheusValue(5 * 1024 ** 3, "gigabytes", 2)).toEqual({ valueText: "5,00", unitText: "GB", progress: undefined });
-    expect(formatPrometheusValue(5400, "duration_auto", 1)).toEqual({ valueText: "1,5", unitText: "h", progress: undefined });
+  it("caps browser payloads while retaining complete endpoint counts", () => {
+    const result = parsePrometheusMetrics(exposition, 2);
+    expect(result.samples).toHaveLength(2);
+    expect(result.seriesCount).toBe(5);
+    expect(result.truncated).toBe(true);
   });
 
-  it("queries the Prometheus instant endpoint and reduces vector samples", async () => {
+  it("rejects responses without readable metrics", () => {
+    expect(() => parsePrometheusMetrics("# only comments\ninvalid text\nmetric NaN")).toThrow(/keine lesbaren/i);
+  });
+
+  it("formats ordinary, small and very large values compactly", () => {
+    expect(formatPrometheusSample(1536.125)).toBe("1.536,125");
+    expect(formatPrometheusSample(0.00001)).toBe("1.000e-5");
+    expect(formatPrometheusSample(1_000_000_000_000)).toBe("1.000e+12");
+  });
+
+  it("loads the configured metrics link as text", async () => {
     let requestedUrl = "";
-    let requestedHeaders: Record<string, string> | undefined;
+    let requestedOptions: SafeHttpOptions | undefined;
     const provider = definition.createProvider!({
       http: {
-        async getJson<T>(url: string, options?: SafeHttpOptions) {
+        async getJson() { throw new Error("JSON API must not be used"); },
+        async getText(url: string, options?: SafeHttpOptions) {
           requestedUrl = url;
-          requestedHeaders = options?.headers;
-          return {
-            status: "success",
-            data: {
-              resultType: "vector",
-              result: [{ value: [1_700_000_000, "4"] }, { value: [1_700_000_001, "8"] }],
-            },
-          } as T;
+          requestedOptions = options;
+          return exposition;
         },
-        async getText() { return ""; },
       },
       async getHostSnapshot() { return {}; },
     });
 
-    const result = await provider.load({
-      baseUrl: "https://metrics.example/prometheus/",
-      query: "sum(rate(http_requests_total[5m]))",
-      label: "Requests",
-      reduction: "average",
-      unit: "number",
-      decimals: 2,
-      headerName: "Authorization",
-      headerValue: "Bearer secret",
-    }) as { value: number; seriesCount: number; source: string };
+    const config = definition.configSchema.parse({ metricsUrl: "win11.homelab.de/metrics" });
+    const result = await provider.load(config) as { metricCount: number; seriesCount: number; source: string };
+    expect(requestedUrl).toBe("https://win11.homelab.de/metrics");
+    expect(requestedOptions).toMatchObject({ timeoutMs: 10_000, maxBytes: 2 * 1024 * 1024 });
+    expect(result).toMatchObject({ metricCount: 4, seriesCount: 5, source: "win11.homelab.de" });
+  });
 
-    const endpoint = new URL(requestedUrl);
-    expect(endpoint.pathname).toBe("/prometheus/api/v1/query");
-    expect(endpoint.searchParams.get("query")).toBe("sum(rate(http_requests_total[5m]))");
-    expect(requestedHeaders).toEqual({ Authorization: "Bearer secret" });
-    expect(result).toEqual({ value: 6, seriesCount: 2, source: "metrics.example" });
+  it("migrates the old base URL configuration to /metrics", () => {
+    expect(definition.configSchema.parse({
+      baseUrl: "https://prometheus.homelab.de/prometheus/",
+      query: "up",
+      label: "Up",
+      reduction: "sum",
+    })).toEqual({ metricsUrl: "https://prometheus.homelab.de/prometheus/metrics" });
   });
 });

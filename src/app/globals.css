@@ -822,22 +822,28 @@ kbd { color: var(--text-subtle); font-size: 9px; }
 .prometheus-top { display: flex; align-items: center; justify-content: space-between; color: var(--text-subtle); font-family: var(--font-mono); font-size: 10px; letter-spacing: .07em; }
 .prometheus-top > span { display: inline-flex; align-items: center; gap: 6px; }
 .prometheus-top > span:first-child svg { color: #fb923c; }
-.prometheus-value { min-width: 0; margin-top: auto; display: flex; align-items: baseline; gap: 8px; }
-.prometheus-value strong { overflow: hidden; color: var(--text-primary); font-size: clamp(38px, 4vw, 58px); font-weight: 480; letter-spacing: -.065em; line-height: 1; text-overflow: ellipsis; white-space: nowrap; }
-.prometheus-value > span { color: #fdba74; font-size: 15px; font-weight: 700; }
-.prometheus-label { margin: 7px 0 auto; overflow: hidden; color: var(--text-muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.prometheus-progress { height: 5px; margin: 9px 0; overflow: hidden; border-radius: 999px; background: #34405c; }
-.prometheus-progress i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #f97316, #fbbf24); box-shadow: 0 0 12px rgb(249 115 22 / .35); }
-.prometheus-meta { min-width: 0; margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 9px; color: var(--text-subtle); font-size: 10px; }
-.prometheus-meta span { min-width: 0; overflow: hidden; display: inline-flex; align-items: center; gap: 5px; text-overflow: ellipsis; white-space: nowrap; }
-.prometheus-query { margin-top: 8px; padding: 7px 8px; overflow: hidden; border: 1px solid #3c4864; border-radius: 7px; color: #c9bff0; background: #11182c; font-family: var(--font-mono); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.prometheus-summary { min-height: 61px; margin-top: 12px; padding: 9px 11px; border: 1px solid #3c4864; border-radius: 10px; display: flex; align-items: center; gap: 12px; background: rgb(17 24 44 / .72); }
+.prometheus-summary > span:not(.prometheus-source) { display: grid; gap: 3px; }
+.prometheus-summary strong { color: #fed7aa; font-size: 17px; font-weight: 620; }
+.prometheus-summary small { color: var(--text-subtle); font-family: var(--font-mono); font-size: 7px; letter-spacing: .08em; }
+.prometheus-summary > i { width: 1px; height: 28px; background: #3c4864; }
+.prometheus-source { min-width: 0; margin-left: auto; overflow: hidden; color: var(--text-muted); font-family: var(--font-mono); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.prometheus-metric-list { min-height: 0; margin-top: 8px; flex: 1; overflow: auto; border: 1px solid #35415d; border-radius: 10px; background: rgb(13 20 37 / .52); }
+.prometheus-metric-row { min-height: 48px; padding: 7px 10px; border-bottom: 1px solid rgb(57 69 96 / .62); display: flex; align-items: center; gap: 12px; }
+.prometheus-metric-row:last-child { border-bottom: 0; }
+.prometheus-metric-row > span { min-width: 0; flex: 1; display: grid; gap: 4px; }
+.prometheus-metric-row strong { overflow: hidden; color: var(--text-secondary); font-family: var(--font-mono); font-size: 9px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.prometheus-metric-row small { overflow: hidden; color: var(--text-subtle); font-family: var(--font-mono); font-size: 7px; text-overflow: ellipsis; white-space: nowrap; }
+.prometheus-metric-row code { flex: 0 0 auto; color: #fdba74; font-family: var(--font-mono); font-size: 10px; }
+.prometheus-truncated { margin-top: 7px; display: flex; align-items: center; gap: 6px; color: var(--text-subtle); font-size: 8px; }
+.prometheus-truncated svg { color: #fb923c; }
 .prometheus-skeleton { height: 100%; display: grid; align-content: center; gap: 12px; }
 .prometheus-skeleton span { border-radius: 8px; background: linear-gradient(90deg, #1c2742 20%, #2d3958 50%, #1c2742 80%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
 .prometheus-skeleton span:nth-child(1) { width: 42%; height: 10px; }
-.prometheus-skeleton span:nth-child(2) { width: 70%; height: 54px; }
-.prometheus-skeleton span:nth-child(3) { width: 100%; height: 31px; }
+.prometheus-skeleton span:nth-child(2) { width: 100%; height: 61px; }
+.prometheus-skeleton span:nth-child(3) { width: 100%; height: 115px; }
 
 @container widget-content (max-height: 165px) {
-  .prometheus-query { display: none; }
-  .prometheus-meta { margin-top: 5px; }
+  .prometheus-summary { min-height: 52px; margin-top: 8px; }
+  .prometheus-metric-row { min-height: 42px; }
 }

@@ -25,11 +25,12 @@ export function serializeDashboard(dashboard: DashboardWithWidgets): ClientDashb
     revision: dashboard.revision,
     widgets: dashboard.widgets.map((widget) => {
       const definition = widgetRegistry.require(widget.type);
+      const config = publicConfig(objectValue(widget.config), definition.secretFields);
       return {
         id: widget.id,
         type: widget.type,
         title: widget.title,
-        config: publicConfig(objectValue(widget.config), definition.secretFields),
+        config: widget.type === "prometheus" ? definition.configSchema.parse(config) as Record<string, unknown> : config,
         layout: widgetLayoutSchema.parse(widget.layout) as WidgetLayout,
         updatedAt: widget.updatedAt.toISOString(),
       };
