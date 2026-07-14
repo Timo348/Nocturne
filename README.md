@@ -11,6 +11,8 @@ Nocturne ist ein modulares, selbst gehostetes Homelab-Dashboard mit personalisie
 - Widgets: Quick Links, Open-Meteo-Wetter, RSS/Atom, Gitea, Prometheus-Metrics-Endpunkte, generischer REST-Wert und Host-/Collector-Metriken.
 - Rollen `VIEWER`, `DEVELOPER`, `ADMIN`; Gitea, Prometheus und REST sind serverseitig auf Developer/Admin beschränkt.
 - JSON-Import/-Export inklusive Konfigurationen und Breakpoint-Layouts. Share-Exporte ersetzen Secrets immer durch Platzhalter.
+- Widerrufbare TV-/Monitoring-Links ohne Navigation, weiterhin mit einem dezenten Layout-Schalter zum Verschieben der Widgets.
+- Vier persistente Benutzer-Themes (Nocturne, Polarlicht, Glut und Graphit); für jede geteilte Dashboard-Ansicht lässt sich ein unabhängiges Theme festlegen.
 - Lokale Anmeldung, HttpOnly-Session-Cookie, AES-256-GCM für Widget-Secrets und serverseitiger Datenproxy.
 
 ## Schnellstart unter Windows / PowerShell
@@ -38,7 +40,7 @@ docker compose pull
 docker compose up -d
 ```
 
-Das veröffentlichte Image liegt unter `timo348/nocturne:0.2.2`. Für einen lokalen Build kann stattdessen `docker compose up -d --build` verwendet werden. Compose persistiert SQLite im Volume `nocturne-data`, führt Migration und Seed beim Start aus und stellt den Dienst standardmäßig auf Port `3000` bereit. Der Web-Container erhält bewusst keinen Docker-Socket.
+Das veröffentlichte Image liegt unter `timo348/nocturne:0.3.0`. Für einen lokalen Build kann stattdessen `docker compose up -d --build` verwendet werden. Compose persistiert SQLite im Volume `nocturne-data`, führt Migration und Seed beim Start aus und stellt den Dienst standardmäßig auf Port `3000` bereit. Der Web-Container erhält bewusst keinen Docker-Socket.
 
 ## Konfiguration
 

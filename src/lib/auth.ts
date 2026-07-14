@@ -2,13 +2,14 @@ import "server-only";
 import { db } from "./db";
 import { readSessionClaims } from "./session";
 import type { SessionUser } from "@/widget-engine/contracts";
+import { normalizeTheme } from "./themes";
 
 export async function getCurrentUser(): Promise<SessionUser | null> {
   const claims = await readSessionClaims();
   if (!claims) return null;
   const user = await db.user.findUnique({ where: { id: claims.id } });
   if (!user) return null;
-  return { id: user.id, email: user.email, name: user.name, role: user.role };
+  return { id: user.id, email: user.email, name: user.name, role: user.role, theme: normalizeTheme(user.theme) };
 }
 
 export async function requireUser() {

@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
 import type { z } from "zod";
+import type { AppTheme } from "@/lib/themes";
 
 export const APP_ROLES = ["VIEWER", "DEVELOPER", "ADMIN"] as const;
 export type AppRole = (typeof APP_ROLES)[number];
@@ -94,6 +95,7 @@ export type ClientDashboard = {
   environment: string;
   isDefault: boolean;
   isShared: boolean;
+  shareTheme: AppTheme;
   revision: number;
   widgets: ClientWidget[];
 };
@@ -103,6 +105,7 @@ export type SessionUser = {
   email: string;
   name: string;
   role: AppRole;
+  theme: AppTheme;
 };
 
 export type BootstrapData = {

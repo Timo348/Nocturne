@@ -15,6 +15,7 @@ import WidgetCatalog from "./widget-catalog";
 import WidgetConfigDrawer from "./widget-config-drawer";
 import { NewDashboardDialog, TransferDialog } from "./dashboard-dialogs";
 import ShareDashboardDialog from "./share-dashboard-dialog";
+import type { AppTheme } from "@/lib/themes";
 
 type SaveStatus = "saved" | "pending" | "saving" | "error" | "conflict";
 type AppSection = "dashboards" | "services" | "activity" | "settings";
@@ -162,6 +163,23 @@ export default function DashboardApp({ initialData }: { initialData: BootstrapDa
     window.localStorage.setItem("nocturne-motion", value ? "reduced" : "full");
   }
 
+  async function updateTheme(theme: AppTheme) {
+    const previous = dataRef.current.user.theme;
+    setData((current) => ({ ...current, user: { ...current.user, theme } }));
+    try {
+      const response = await fetch("/api/user/preferences", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ theme }),
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error ?? "Theme konnte nicht gespeichert werden.");
+    } catch (error) {
+      setData((current) => ({ ...current, user: { ...current.user, theme: previous } }));
+      throw error;
+    }
+  }
+
   if (!active) return <main className="fatal-state"><h1>Kein Dashboard verfügbar</h1><p>Starte den Seed-Vorgang oder lege ein Dashboard über die API an.</p></main>;
 
   const commands = [
@@ -177,7 +195,7 @@ export default function DashboardApp({ initialData }: { initialData: BootstrapDa
   ].filter((command) => command.label.toLowerCase().includes(commandQuery.toLowerCase()));
 
   return (
-    <div className={`app-shell ${sidebarCollapsed ? "sidebar-collapsed" : ""} ${compact ? "density-compact" : ""} ${reducedMotion ? "motion-reduced" : ""}`}>
+    <div data-theme={data.user.theme} className={`app-shell ${sidebarCollapsed ? "sidebar-collapsed" : ""} ${compact ? "density-compact" : ""} ${reducedMotion ? "motion-reduced" : ""}`}>
       <aside className={`sidebar ${mobileNav ? "mobile-open" : ""}`}>
         <div className="sidebar-brand"><div className="brand-lockup"><span className="brand-mark"><i /><i /><i /></span><span>NOCTURNE<small>CONTROL ROOM</small></span></div><button className="icon-button collapse-button" onClick={toggleSidebar} aria-label="Navigation einklappen">{sidebarCollapsed ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}</button></div>
         <nav className="main-nav" aria-label="Hauptnavigation">
@@ -229,7 +247,7 @@ export default function DashboardApp({ initialData }: { initialData: BootstrapDa
           </>}
           {section === "services" && <ServicesView dashboards={data.dashboards} catalog={data.catalog} onOpenDashboard={(dashboardId) => { setActiveId(dashboardId); openSection("dashboards"); }} onConfigure={(dashboardId, widget, definition) => { setActiveId(dashboardId); setConfigTarget({ dashboardId, widget, definition }); }} />}
           {section === "activity" && <ActivityView dashboards={data.dashboards} />}
-          {section === "settings" && <SettingsView key={active.id} dashboard={active} user={data.user} compact={compact} reducedMotion={reducedMotion} onCompactChange={updateCompact} onReducedMotionChange={updateReducedMotion} onSaved={() => refresh(active.id)} onTransfer={() => setTransferOpen(true)} onLogout={logout} />}
+          {section === "settings" && <SettingsView key={active.id} dashboard={active} user={data.user} compact={compact} reducedMotion={reducedMotion} onCompactChange={updateCompact} onReducedMotionChange={updateReducedMotion} onThemeChange={updateTheme} onSaved={() => refresh(active.id)} onTransfer={() => setTransferOpen(true)} onLogout={logout} />}
         </main>
       </div>
 

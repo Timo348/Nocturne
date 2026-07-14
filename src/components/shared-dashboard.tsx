@@ -86,7 +86,7 @@ export default function SharedDashboard({ token, initialDashboard, catalog }: { 
   const StatusIcon = saveStatus === "saving" ? LoaderCircle : saveStatus === "error" || saveStatus === "conflict" ? CloudOff : Check;
 
   return (
-    <main className={`shared-dashboard-shell ${editing ? "is-editing" : ""}`} aria-label={`Geteiltes Dashboard ${dashboard.name}`}>
+    <main data-theme={dashboard.shareTheme} className={`shared-dashboard-shell ${editing ? "is-editing" : ""}`} aria-label={`Geteiltes Dashboard ${dashboard.name}`}>
       <div className="shared-dashboard-aurora" aria-hidden="true" />
       <h1 className="sr-only">{dashboard.name}</h1>
       <DashboardGrid

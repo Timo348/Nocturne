@@ -19,6 +19,7 @@ model User {
   name           String
   passwordHash   String
   role           Role            @default(VIEWER)
+  theme          String          @default("nocturne")
   dashboards     Dashboard[]
   activityEvents ActivityEvent[]
   createdAt      DateTime        @default(now())
@@ -37,6 +38,7 @@ model Dashboard {
   revision    Int              @default(1)
   shareToken  String?          @unique
   sharedAt    DateTime?
+  shareTheme  String           @default("nocturne")
   widgets     WidgetInstance[]
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt

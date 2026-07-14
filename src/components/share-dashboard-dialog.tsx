@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Check, Copy, ExternalLink, Link2, LoaderCircle, RefreshCw, ShieldCheck, Unlink, X } from "lucide-react";
+import { Check, Copy, ExternalLink, Link2, LoaderCircle, Palette, RefreshCw, ShieldCheck, Unlink, X } from "lucide-react";
 import type { ClientDashboard } from "@/widget-engine/contracts";
+import { THEME_OPTIONS, type AppTheme } from "@/lib/themes";
 
-type ShareInfo = { enabled: boolean; path: string | null };
+type ShareInfo = { enabled: boolean; path: string | null; theme: AppTheme };
 
 export default function ShareDashboardDialog({ dashboard, onClose, onChanged }: { dashboard: ClientDashboard; onClose(): void; onChanged(): Promise<void> | void }) {
   const [info, setInfo] = useState<ShareInfo | null>(null);
@@ -28,7 +29,7 @@ export default function ShareDashboardDialog({ dashboard, onClose, onChanged }: 
     return () => { active = false; window.cancelAnimationFrame(originFrame); };
   }, [dashboard.id]);
 
-  async function runAction(action: "enable" | "disable" | "regenerate") {
+  async function runAction(action: "enable" | "disable" | "regenerate" | "set_theme", theme?: AppTheme) {
     if (action === "regenerate" && !window.confirm("Der bisherige Link funktioniert danach nicht mehr. Link wirklich erneuern?")) return;
     if (action === "disable" && !window.confirm("Alle Geräte mit diesem Link verlieren sofort den Zugriff. Freigabe wirklich beenden?")) return;
     setPending(true); setError(""); setCopied(false);
@@ -36,7 +37,7 @@ export default function ShareDashboardDialog({ dashboard, onClose, onChanged }: 
       const response = await fetch(`/api/dashboards/${dashboard.id}/share`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify(action === "set_theme" ? { action, theme } : { action }),
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error ?? "Freigabe konnte nicht geändert werden.");
@@ -73,6 +74,15 @@ export default function ShareDashboardDialog({ dashboard, onClose, onChanged }: 
         <div className="share-dialog-body">
           {!info && !error && <div className="share-loading"><LoaderCircle className="spin" size={18} /> Freigabe wird geladen …</div>}
           {error && <div className="form-error">{error}</div>}
+          {info && <fieldset className="share-theme-picker" disabled={pending}>
+            <legend><Palette size={14} /> THEME DER TV-ANSICHT</legend>
+            <div>{THEME_OPTIONS.map((theme) => <label className={info.theme === theme.id ? "active" : ""} key={theme.id}>
+              <input type="radio" name="share-theme" value={theme.id} checked={info.theme === theme.id} onChange={() => void runAction("set_theme", theme.id)} />
+              <span className="theme-swatches" aria-hidden="true">{theme.colors.map((color) => <i style={{ background: color }} key={color} />)}</span>
+              <strong>{theme.name}</strong>
+            </label>)}</div>
+            <small>Wird für alle Geräte fest am Freigabelink verwendet.</small>
+          </fieldset>}
           {info && !info.enabled && <>
             <div className="share-intro"><span><ShieldCheck size={19} /></span><div><strong>Widerrufbarer Monitoring-Link</strong><p>Der Link zeigt nur Widgets und erlaubt das Verschieben. Konfiguration und geheime Werte bleiben geschützt.</p></div></div>
             <button className="primary-button share-enable" disabled={pending} onClick={() => void runAction("enable")}>{pending ? <LoaderCircle className="spin" size={16} /> : <Link2 size={16} />} Freigabelink erstellen</button>

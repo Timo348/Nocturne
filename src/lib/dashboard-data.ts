@@ -5,6 +5,7 @@ import { publicConfig } from "./secrets";
 import { widgetRegistry } from "./widget-container";
 import type { BootstrapData, ClientDashboard, SessionUser, WidgetLayout } from "@/widget-engine/contracts";
 import { widgetLayoutSchema } from "@/widget-engine/layout";
+import { normalizeTheme } from "./themes";
 
 type DashboardWithWidgets = Dashboard & { widgets: WidgetInstance[] };
 
@@ -22,6 +23,7 @@ export function serializeDashboard(dashboard: DashboardWithWidgets): ClientDashb
     environment: dashboard.environment,
     isDefault: dashboard.isDefault,
     isShared: Boolean(dashboard.shareToken),
+    shareTheme: normalizeTheme(dashboard.shareTheme),
     revision: dashboard.revision,
     widgets: dashboard.widgets.map((widget) => {
       const definition = widgetRegistry.require(widget.type);
