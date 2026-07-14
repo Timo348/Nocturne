@@ -35,7 +35,7 @@ export const definition = defineWidget<Config>({
   },
   configSchema,
   fields: [
-    { key: "baseUrl", label: "Gitea-URL", type: "url", placeholder: "https://gitea.home", required: true, help: "Interne Hosts müssen in FETCH_ALLOWED_HOSTS stehen." },
+    { key: "baseUrl", label: "Gitea-URL", type: "url", placeholder: "https://gitea.home", required: true, help: "Öffentliche, private und lokale HTTP(S)-Ziele sind erlaubt." },
     { key: "token", label: "Access Token", type: "password", placeholder: "Bereits gesetztes Secret bleibt erhalten", help: "Wird verschlüsselt gespeichert und nie an den Browser zurückgegeben." },
     { key: "limit", label: "Repositories", type: "number", min: 2, max: 12, step: 1 },
   ],

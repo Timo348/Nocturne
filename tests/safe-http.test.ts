@@ -1,7 +1,5 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { validateOutboundHeaders, validateOutboundUrl } from "@/lib/safe-http";
-
-afterEach(() => { process.env.FETCH_ALLOWED_HOSTS = ""; });
 
 describe("outbound URL policy", () => {
   it("rejects non-HTTP schemes and embedded credentials", async () => {
@@ -9,16 +7,13 @@ describe("outbound URL policy", () => {
     await expect(validateOutboundUrl("http://user:pass@example.com/status")).rejects.toThrow(/Credentials/);
   });
 
-  it("rejects private targets unless an administrator explicitly allowlists them", async () => {
-    process.env.FETCH_ALLOWED_HOSTS = "";
-    await expect(validateOutboundUrl("http://127.0.0.1/status")).rejects.toThrow(/FETCH_ALLOWED_HOSTS/);
-    process.env.FETCH_ALLOWED_HOSTS = "127.0.0.1";
+  it("allows private, loopback and special HTTP targets without an allowlist", async () => {
     const result = await validateOutboundUrl("http://127.0.0.1/status");
-    expect(result.explicitlyAllowed).toBe(true);
+    expect(result.url.hostname).toBe("127.0.0.1");
+    expect(result.addresses).toEqual([{ address: "127.0.0.1", family: 4 }]);
   });
 
-  it("does not treat a username-like prefix as an allowlisted hostname", async () => {
-    process.env.FETCH_ALLOWED_HOSTS = "allowed.example";
+  it("still rejects a username-like prefix instead of treating it as a hostname", async () => {
     await expect(validateOutboundUrl("http://allowed.example@127.0.0.1/status")).rejects.toThrow(/Credentials/);
   });
 

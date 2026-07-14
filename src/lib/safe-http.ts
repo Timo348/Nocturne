@@ -24,38 +24,6 @@ export function validateOutboundHeaders(headers: Record<string, string> = {}) {
   return output;
 }
 
-function exactAllowlist() {
-  return new Set(
-    (process.env.FETCH_ALLOWED_HOSTS ?? "")
-      .split(",")
-      .map((value) => value.trim().toLowerCase())
-      .filter(Boolean),
-  );
-}
-
-function isBlockedIpv4(address: string) {
-  const parts = address.split(".").map(Number);
-  if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return true;
-  const [a, b] = parts;
-  return (
-    a === 0 ||
-    a === 10 ||
-    a === 127 ||
-    (a === 169 && b === 254) ||
-    (a === 172 && b >= 16 && b <= 31) ||
-    (a === 192 && b === 168) ||
-    a >= 224
-  );
-}
-
-function isBlockedIp(address: string) {
-  if (net.isIPv4(address)) return isBlockedIpv4(address);
-  if (!net.isIPv6(address)) return true;
-  const normalized = address.toLowerCase();
-  if (normalized.startsWith("::ffff:")) return isBlockedIpv4(normalized.slice(7));
-  return normalized === "::" || normalized === "::1" || normalized.startsWith("fe80:") || normalized.startsWith("fc") || normalized.startsWith("fd") || normalized.startsWith("ff");
-}
-
 export async function validateOutboundUrl(raw: string) {
   let url: URL;
   try {
@@ -67,14 +35,9 @@ export async function validateOutboundUrl(raw: string) {
   if (url.username || url.password) throw new Error("Credentials in target URLs are not allowed");
 
   const host = url.hostname.toLowerCase();
-  const hostWithPort = url.port ? `${host}:${url.port}` : host;
-  const explicitlyAllowed = exactAllowlist().has(host) || exactAllowlist().has(hostWithPort) || exactAllowlist().has(url.origin.toLowerCase());
   const addresses = net.isIP(host) ? [{ address: host, family: net.isIPv6(host) ? 6 : 4 }] : await dns.lookup(host, { all: true, verbatim: true });
   if (addresses.length === 0) throw new Error("Target host did not resolve");
-  if (!explicitlyAllowed && addresses.some(({ address }) => isBlockedIp(address))) {
-    throw new Error("Private or special network targets require FETCH_ALLOWED_HOSTS");
-  }
-  return { url, addresses, explicitlyAllowed };
+  return { url, addresses };
 }
 
 function requestBuffer(raw: string, options: SafeHttpOptions = {}) {
@@ -94,7 +57,7 @@ function requestBuffer(raw: string, options: SafeHttpOptions = {}) {
           headers: {
             host: url.host,
             accept: "application/json, application/xml, text/xml, text/plain;q=0.9, */*;q=0.1",
-            "user-agent": "Nocturne-Homelab/0.1",
+            "user-agent": "Nocturne-Homelab",
             ...validateOutboundHeaders(options.headers),
           },
         },

@@ -44,7 +44,7 @@ export const definition = defineWidget<Config>({
   },
   configSchema,
   fields: [
-    { key: "url", label: "Feed-URL", type: "url", placeholder: "https://example.com/feed.xml", required: true, help: "Private Ziele müssen in FETCH_ALLOWED_HOSTS stehen." },
+    { key: "url", label: "Feed-URL", type: "url", placeholder: "https://example.com/feed.xml", required: true, help: "Öffentliche, private und lokale HTTP(S)-Ziele sind erlaubt." },
     { key: "limit", label: "Einträge", type: "number", min: 2, max: 10, step: 1 },
   ],
   secretFields: [],

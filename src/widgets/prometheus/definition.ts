@@ -41,7 +41,7 @@ export const definition = defineWidget<Config>({
       type: "text",
       placeholder: "monitoring.homelab.de/metrics",
       required: true,
-      help: "Direkter Link zum /metrics-Endpunkt. Ohne http:// oder https:// wird automatisch HTTPS verwendet. Private Ziele müssen in FETCH_ALLOWED_HOSTS stehen.",
+      help: "Direkter Link zum /metrics-Endpunkt. Ohne http:// oder https:// wird automatisch HTTPS verwendet.",
     },
   ],
   secretFields: [],

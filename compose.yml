@@ -1,7 +1,7 @@
 services:
   nocturne:
     build: .
-    image: timo348/nocturne:0.2.1
+    image: timo348/nocturne:0.2.2
     restart: unless-stopped
     ports:
       - "${APP_PORT:-3000}:3000"
@@ -13,7 +13,6 @@ services:
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@home.local}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
       ADMIN_NAME: ${ADMIN_NAME:-Timo}
-      FETCH_ALLOWED_HOSTS: ${FETCH_ALLOWED_HOSTS:-}
     volumes:
       - nocturne-data:/data
     healthcheck:

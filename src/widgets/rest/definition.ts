@@ -38,7 +38,7 @@ export const definition = defineWidget<Config>({
   },
   configSchema,
   fields: [
-    { key: "url", label: "JSON-Endpunkt", type: "url", placeholder: "https://service.home/api/status", required: true, help: "Nur GET; interne Hosts benötigen FETCH_ALLOWED_HOSTS." },
+    { key: "url", label: "JSON-Endpunkt", type: "url", placeholder: "https://service.home/api/status", required: true, help: "Direkter HTTP(S)-Endpunkt; private und lokale Ziele sind erlaubt." },
     { key: "valuePath", label: "Wertpfad", type: "text", placeholder: "system.temperature" },
     { key: "label", label: "Bezeichnung", type: "text", placeholder: "Temperatur", required: true },
     { key: "prefix", label: "Präfix", type: "text", placeholder: "" },

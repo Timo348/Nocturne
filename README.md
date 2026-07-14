@@ -8,7 +8,7 @@ Nocturne ist ein modulares, selbst gehostetes Homelab-Dashboard mit personalisie
 - Drag-and-drop, Resize und barrierearme Pfeiltasten-Steuerung; Änderungen werden optimistisch und entprellt im Hintergrund gespeichert.
 - Build-Time-Discovery: Jeder Ordner unter `src/widgets/*` wird ohne zentralen Registry-Eintrag automatisch in getrennte Server- und Client-Registries aufgenommen.
 - Strikter Widget-Vertrag für Metadaten, Rolle, Größenregeln, Zod-Konfiguration, Secret-Felder, Datenprovider und React-View.
-- Widgets: Quick Links, Open-Meteo-Wetter, RSS/Atom, Gitea, Prometheus/PromQL, generischer REST-Wert und Host-/Collector-Metriken.
+- Widgets: Quick Links, Open-Meteo-Wetter, RSS/Atom, Gitea, Prometheus-Metrics-Endpunkte, generischer REST-Wert und Host-/Collector-Metriken.
 - Rollen `VIEWER`, `DEVELOPER`, `ADMIN`; Gitea, Prometheus und REST sind serverseitig auf Developer/Admin beschränkt.
 - JSON-Import/-Export inklusive Konfigurationen und Breakpoint-Layouts. Share-Exporte ersetzen Secrets immer durch Platzhalter.
 - Lokale Anmeldung, HttpOnly-Session-Cookie, AES-256-GCM für Widget-Secrets und serverseitiger Datenproxy.
@@ -33,12 +33,12 @@ Danach `http://localhost:3000` öffnen. Die lokale Anmeldung verwendet `ADMIN_EM
 
 ```powershell
 Copy-Item .env.example .env
-# Sichere Werte und optional APP_PORT/FETCH_ALLOWED_HOSTS setzen.
+# Sichere Werte und optional APP_PORT setzen.
 docker compose pull
 docker compose up -d
 ```
 
-Das veröffentlichte Image liegt unter `timo348/nocturne:latest`. Für einen lokalen Build kann stattdessen `docker compose up -d --build` verwendet werden. Compose persistiert SQLite im Volume `nocturne-data`, führt Migration und Seed beim Start aus und stellt den Dienst standardmäßig auf Port `3000` bereit. Der Web-Container erhält bewusst keinen Docker-Socket.
+Das veröffentlichte Image liegt unter `timo348/nocturne:0.2.2`. Für einen lokalen Build kann stattdessen `docker compose up -d --build` verwendet werden. Compose persistiert SQLite im Volume `nocturne-data`, führt Migration und Seed beim Start aus und stellt den Dienst standardmäßig auf Port `3000` bereit. Der Web-Container erhält bewusst keinen Docker-Socket.
 
 ## Konfiguration
 
@@ -50,22 +50,14 @@ Das veröffentlichte Image liegt unter `timo348/nocturne:latest`. Für einen lok
 | `SESSION_COOKIE_SECURE` | `false` für direkten HTTP-Zugriff; hinter einem HTTPS-Reverse-Proxy auf `true` setzen. |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME` | Erster lokaler Admin beim initialen Seed. |
 | `APP_PORT` | Externer Compose-Port, Standard `3000`. |
-| `FETCH_ALLOWED_HOSTS` | Kommagetrennte exakte Hosts/Hosts mit Port für private RSS-, Gitea-, Prometheus-, REST- und Collector-Ziele. |
 
-Öffentliche HTTP(S)-Ziele werden nach DNS-Prüfung erlaubt. Private, Loopback-, Link-Local- und Sondernetze benötigen einen exakten Eintrag in `FETCH_ALLOWED_HOSTS`. Redirects, URL-Credentials und Nicht-HTTP-Protokolle werden abgewiesen. Standardabrufe sind auf 1 MiB und fünf Sekunden begrenzt; Prometheus-Instant-Queries auf 512 KiB und acht Sekunden.
+Alle öffentlichen, privaten, lokalen, Loopback-, Link-Local- und sonstigen HTTP(S)-Ziele sind ohne Host-Allowlist erreichbar. Redirects, URL-Credentials und Nicht-HTTP-Protokolle werden weiterhin abgewiesen. Standardabrufe sind auf 1 MiB und fünf Sekunden begrenzt; Prometheus-Metrics-Abrufe auf 2 MiB und zehn Sekunden.
 
 ## Prometheus-Widget
 
-Das Widget ruft serverseitig den offiziellen Instant-Query-Endpunkt `/api/v1/query` auf. Eine PromQL-Abfrage darf einen Scalar oder Vector liefern; mehrere Vector-Reihen lassen sich als Summe, Durchschnitt, Minimum, Maximum oder erster Wert reduzieren.
+Das Widget benötigt nur einen direkten Prometheus-/OpenMetrics-Link wie `monitoring.homelab.de/metrics`. Fehlt das URL-Schema, wird automatisch `https://` verwendet. Der serverseitige Provider liest das Textformat, zählt Metriken und Zeitreihen und zeigt bis zu 160 Samples als scrollbare Live-Liste.
 
-Anzeigeformate:
-
-- Zahl ohne Einheit;
-- Prozent als vorhandener Wert `0–100` oder aus einer Ratio `0–1`;
-- Bytes automatisch oder fest als Byte, KB, MB beziehungsweise GB;
-- Sekunden automatisch oder fest als Millisekunden, Sekunden, Minuten beziehungsweise Stunden.
-
-Die Byte-Formate erwarten Bytes und die Zeitformate Sekunden als PromQL-Ergebnis. Andere Quellformate können direkt in PromQL umgerechnet werden. Private Prometheus-Hosts müssen exakt in `FETCH_ALLOWED_HOSTS` stehen. Optional können ein Headername und ein verschlüsselt gespeicherter Headerwert für Bearer-, Basic- oder Tenant-Authentifizierung gesetzt werden. API-Form und Query-Semantik: [Prometheus HTTP API](https://prometheus.io/docs/prometheus/latest/querying/api/).
+Private und lokale Metrics-Endpunkte funktionieren ohne zusätzliche Umgebungsvariable. Bestehende Konfigurationen des früheren PromQL-Widgets werden automatisch von ihrer Basis-URL auf `<basis>/metrics` umgestellt.
 
 ## Ein neues Widget hinzufügen
 
@@ -88,7 +80,7 @@ Fehlende Dateien, doppelte Widget-Typen oder Contract-/TypeScript-Fehler brechen
 - Secret-Felder werden vor dem Speichern mit AES-256-GCM versiegelt, bei API-Antworten redigiert und in Share-Exporten durch `{ "$secret": "required" }` ersetzt.
 - Alle Dashboard-, Widget-, Layout-, Daten- und Import-Routen prüfen Sitzung, Eigentümer und Widget-Rolle serverseitig.
 - Layout-PATCH verwendet `revision` als optimistische Sperre. Veraltete parallele Änderungen erhalten HTTP `409` statt still überschrieben zu werden.
-- Der sichere HTTP-Client pinnt eine zuvor geprüfte DNS-Adresse, setzt den ursprünglichen Host/SNI, folgt keinen Redirects und verwendet eine exakte Allowlist für private Homelab-Ziele. Das folgt der [OWASP-SSRF-Empfehlung für Allowlisting und deaktivierte Redirects](https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html).
+- Der HTTP-Client pinnt die aufgelöste DNS-Adresse, setzt den ursprünglichen Host/SNI und folgt keinen Redirects. Bewusst sind alle HTTP(S)-Ziele einschließlich privater Netze und Loopback erreichbar; Widget-Konfigurationen sollten daher nur vertrauenswürdigen Administratoren zugänglich sein.
 - Docker-Metriken kommen optional von einem schmalen externen Read-only-Collector. Ein Beispiel-Response steht weiter unten; der Webprozess mountet keinen Docker-Socket.
 
 Collector-Response:
