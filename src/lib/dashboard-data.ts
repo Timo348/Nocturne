@@ -21,6 +21,7 @@ export function serializeDashboard(dashboard: DashboardWithWidgets): ClientDashb
     description: dashboard.description,
     environment: dashboard.environment,
     isDefault: dashboard.isDefault,
+    isShared: Boolean(dashboard.shareToken),
     revision: dashboard.revision,
     widgets: dashboard.widgets.map((widget) => {
       const definition = widgetRegistry.require(widget.type);

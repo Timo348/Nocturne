@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, type SetStateAction } from "react
 import {
   Activity, Bell, Boxes, Check, ChevronDown, Clock3, CloudOff, Command, Download, Gauge,
   LayoutDashboard, LoaderCircle, LogOut, Menu, Network, PanelLeftClose, PanelLeftOpen, PencilLine,
-  Plus, Search, Server, Settings, ShieldCheck, SlidersHorizontal, Sparkles, Upload, X, Zap,
+  Plus, Search, Server, Settings, Share2, ShieldCheck, SlidersHorizontal, Sparkles, Upload, X, Zap,
 } from "lucide-react";
 import type { BootstrapData, ClientWidget, WidgetCatalogItem, WidgetLayout } from "@/widget-engine/contracts";
 import DashboardGrid from "./dashboard-grid";
@@ -14,6 +14,7 @@ import SettingsView from "./settings-view";
 import WidgetCatalog from "./widget-catalog";
 import WidgetConfigDrawer from "./widget-config-drawer";
 import { NewDashboardDialog, TransferDialog } from "./dashboard-dialogs";
+import ShareDashboardDialog from "./share-dashboard-dialog";
 
 type SaveStatus = "saved" | "pending" | "saving" | "error" | "conflict";
 type AppSection = "dashboards" | "services" | "activity" | "settings";
@@ -44,6 +45,7 @@ export default function DashboardApp({ initialData }: { initialData: BootstrapDa
   const [configTarget, setConfigTarget] = useState<{ definition: WidgetCatalogItem; widget?: ClientWidget; dashboardId?: string } | null>(null);
   const [newDashboard, setNewDashboard] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState("");
   const [now, setNow] = useState<Date | null>(null);
@@ -166,6 +168,7 @@ export default function DashboardApp({ initialData }: { initialData: BootstrapDa
     { label: "Widget hinzufügen", hint: "A", icon: Plus, action: () => setCatalogOpen(true) },
     { label: editing ? "Bearbeitungsmodus beenden" : "Layout bearbeiten", hint: "E", icon: PencilLine, action: () => setEditing((value) => !value) },
     { label: "Dashboard importieren / exportieren", hint: "I", icon: Upload, action: () => setTransferOpen(true) },
+    { label: "Dashboard teilen", hint: "", icon: Share2, action: () => setShareOpen(true) },
     { label: "Neues Dashboard", hint: "N", icon: LayoutDashboard, action: () => setNewDashboard(true) },
     { label: "Services öffnen", hint: "", icon: Server, action: () => openSection("services") },
     { label: "Activity öffnen", hint: "", icon: Activity, action: () => openSection("activity") },
@@ -208,7 +211,7 @@ export default function DashboardApp({ initialData }: { initialData: BootstrapDa
                 <div className="dashboard-title-row"><h1>{active.name}</h1><span className="operational-badge"><i /> AKTIV</span></div>
                 <p>{active.description || "Ein persönlicher Blick auf deine wichtigsten Systeme."}</p>
               </div>
-              <div className="dashboard-actions"><SaveIndicator status={saveStatus} onRetry={() => void flushLayouts()} /><button className={`secondary-button edit-button ${editing ? "active" : ""}`} onClick={() => setEditing((value) => !value)}><SlidersHorizontal size={16} /> {editing ? "Bearbeitung beenden" : "Layout bearbeiten"}</button><button className="primary-button" onClick={() => setCatalogOpen(true)}><Plus size={16} /> Widget hinzufügen</button><button className="icon-button action-more" onClick={() => setTransferOpen(true)} title="Import & Export"><Download size={17} /></button></div>
+              <div className="dashboard-actions"><SaveIndicator status={saveStatus} onRetry={() => void flushLayouts()} /><button className={`secondary-button edit-button ${editing ? "active" : ""}`} onClick={() => setEditing((value) => !value)}><SlidersHorizontal size={16} /> {editing ? "Bearbeitung beenden" : "Layout bearbeiten"}</button><button className="primary-button" onClick={() => setCatalogOpen(true)}><Plus size={16} /> Widget hinzufügen</button><button className={`icon-button action-more ${active.isShared ? "active" : ""}`} onClick={() => setShareOpen(true)} title="Dashboard teilen" aria-label="Dashboard teilen"><Share2 size={17} /></button><button className="icon-button action-more" onClick={() => setTransferOpen(true)} title="Import & Export" aria-label="Import und Export"><Download size={17} /></button></div>
             </section>
 
             <section className="signal-strip" aria-label="Dashboard-Status">
@@ -234,6 +237,7 @@ export default function DashboardApp({ initialData }: { initialData: BootstrapDa
       {configTarget && <WidgetConfigDrawer dashboardId={configTarget.dashboardId ?? active.id} definition={configTarget.definition} widget={configTarget.widget} onClose={() => setConfigTarget(null)} onSaved={() => refresh(configTarget.dashboardId ?? active.id)} />}
       {newDashboard && <NewDashboardDialog onClose={() => setNewDashboard(false)} onCreated={(id) => refresh(id)} />}
       {transferOpen && <TransferDialog dashboard={active} onClose={() => setTransferOpen(false)} onImported={(id) => refresh(id)} />}
+      {shareOpen && <ShareDashboardDialog dashboard={active} onClose={() => setShareOpen(false)} onChanged={() => refresh(active.id)} />}
 
       {commandOpen && <div className="command-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setCommandOpen(false); }}><section className="command-palette" role="dialog" aria-modal="true" aria-label="Command Palette"><label><Search size={19} /><input value={commandQuery} onChange={(event) => setCommandQuery(event.target.value)} placeholder="Was möchtest du tun?" autoFocus /><kbd>ESC</kbd></label><div className="command-section-label">ACTIONS & DESTINATIONS</div><div className="command-results">{commands.map((item, index) => { const Icon = item.icon; return <button onClick={() => { item.action(); setCommandOpen(false); setCommandQuery(""); }} key={`${item.label}-${index}`}><span><Icon size={17} /></span><strong>{item.label}</strong>{item.hint && <kbd>{item.hint}</kbd>}</button>; })}{commands.length === 0 && <p>Keine passende Aktion gefunden.</p>}</div><footer><span><kbd>↑</kbd><kbd>↓</kbd> Navigate</span><span><kbd>↵</kbd> Select</span><span>NOCTURNE COMMAND</span></footer></section></div>}
     </div>
