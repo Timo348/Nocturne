@@ -35,6 +35,8 @@ model Dashboard {
   environment String           @default("Home network")
   isDefault   Boolean          @default(false)
   revision    Int              @default(1)
+  shareToken  String?          @unique
+  sharedAt    DateTime?
   widgets     WidgetInstance[]
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt

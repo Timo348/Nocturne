@@ -13,9 +13,12 @@ type Props = {
   catalog: WidgetCatalogItem[];
   editing: boolean;
   compact: boolean;
+  widgetDataBasePath?: string;
+  manageWidgets?: boolean;
+  autoRefresh?: boolean;
   onLayoutsChange(layouts: Record<string, WidgetLayout>): void;
-  onEdit(widget: ClientWidget): void;
-  onDelete(widget: ClientWidget): void;
+  onEdit?(widget: ClientWidget): void;
+  onDelete?(widget: ClientWidget): void;
 };
 
 const breakpointMap = { lg: "desktop", md: "tablet", sm: "mobile" } as const;
@@ -28,7 +31,7 @@ function isGridBreakpoint(value: string): value is GridBreakpoint {
   return value in breakpointMap;
 }
 
-export default function DashboardGrid({ widgets, catalog, editing, compact, onLayoutsChange, onEdit, onDelete }: Props) {
+export default function DashboardGrid({ widgets, catalog, editing, compact, widgetDataBasePath = "/api/widgets", manageWidgets = true, autoRefresh = false, onLayoutsChange, onEdit, onDelete }: Props) {
   const catalogMap = useMemo(() => new Map(catalog.map((item) => [item.type, item])), [catalog]);
   const activeBreakpointRef = useRef<GridBreakpoint>("lg");
   const [activeBreakpoint, setActiveBreakpoint] = useState<GridBreakpoint>("lg");
@@ -115,7 +118,7 @@ export default function DashboardGrid({ widgets, catalog, editing, compact, onLa
         {widgets.map((widget) => {
           const definition = catalogMap.get(widget.type);
           if (!definition) return <div key={widget.id} className="widget-missing">Unbekanntes Widget: {widget.type}</div>;
-          return <div key={widget.id}><WidgetFrame widget={widget} definition={definition} editing={editing} onEdit={() => onEdit(widget)} onDelete={() => onDelete(widget)} onKeyboardLayout={(event) => keyboardLayout(widget, definition, event)} /></div>;
+          return <div key={widget.id}><WidgetFrame widget={widget} definition={definition} editing={editing} dataUrl={`${widgetDataBasePath}/${widget.id}/data`} canManage={manageWidgets} autoRefresh={autoRefresh} onEdit={() => onEdit?.(widget)} onDelete={() => onDelete?.(widget)} onKeyboardLayout={(event) => keyboardLayout(widget, definition, event)} /></div>;
         })}
       </ResponsiveGrid>
     </div>

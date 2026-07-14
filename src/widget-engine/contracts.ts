@@ -93,6 +93,7 @@ export type ClientDashboard = {
   description: string;
   environment: string;
   isDefault: boolean;
+  isShared: boolean;
   revision: number;
   widgets: ClientWidget[];
 };
